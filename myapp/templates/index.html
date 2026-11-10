@@ -1,0 +1,61 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="d-flex justify-content-between mb-3">
+    <div class="btn-group">
+        <a href="?source=db" class="btn btn-outline-primary {% if source == 'db' %}active{% endif %}">БД</a>
+        <a href="?source=file" class="btn btn-outline-secondary {% if source == 'file' %}active{% endif %}">Файл</a>
+    </div>
+    <a href="/submit/" class="btn btn-success">Добавить</a>
+</div>
+
+{% if source == 'db' %}
+    <input type="text" id="searchInput" class="form-control mb-3" placeholder="AJAX поиск...">
+{% endif %}
+
+<table class="table table-striped">
+    <thead><tr><th>Имя</th><th>Текст</th>{% if source == 'db' %}<th>Действия</th>{% endif %}</tr></thead>
+    <tbody id="tbody">
+    {% for r in records %}
+        <tr>
+            <td>{{ r.name }}</td>
+            <td>{{ r.text }}</td>
+            {% if source == 'db' %}
+            <td>
+                <a href="/edit/{{ r.id }}/" class="btn btn-sm btn-warning">Ред.</a>
+                <button class="btn btn-sm btn-danger" onclick="del({{ r.id }})">Удалить</button>
+            </td>
+            {% endif %}
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+
+<script>
+const input = document.getElementById('searchInput');
+if (input) {
+    input.addEventListener('keyup', () => {
+        fetch(`/search/?q=${encodeURIComponent(input.value)}`)
+            .then(r => r.json())
+            .then(data => {
+                const tb = document.getElementById('tbody');
+                tb.innerHTML = data.results.map(r => `
+                    <tr>
+                        <td>${r.name}</td>
+                        <td>${r.text}</td>
+                        <td>
+                            <a href="/edit/${r.id}/" class="btn btn-sm btn-warning">Ред.</a>
+                            <button class="btn btn-sm btn-danger" onclick="del(${r.id})">Удалить</button>
+                        </td>
+                    </tr>`).join('');
+            });
+    });
+}
+function del(id) {
+    if (!confirm('Удалить?')) return;
+    fetch(`/delete/${id}/`, {
+        method: 'POST',
+        headers: {'X-CSRFToken': '{{ csrf_token }}'}
+    }).then(() => location.reload());
+}
+</script>
+{% endblock %}
